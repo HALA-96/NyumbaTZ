@@ -89,7 +89,7 @@ const convertDbPropertyToAppProperty = (dbProperty: any): Property => {
  * 
  * Main page component managing property search and display functionality.
  */
-const HomePage: React.FC = () => {
+export default function HomePage() {
   
   // CORE DATA STATE
   const [properties, setProperties] = useState<Property[]>([]);                // All available properties
@@ -662,6 +662,3 @@ const HomePage: React.FC = () => {
       </div>
     </div>
   );
-};
-
-export default HomePage;
