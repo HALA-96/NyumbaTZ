@@ -20,7 +20,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase, auth, db, isSupabaseConfigured, supabaseUrl, supabaseAnonKey } from '../lib/supabase';
+import { supabase, auth, db, storage, isSupabaseConfigured, supabaseUrl, supabaseAnonKey } from '../lib/supabase';
 import type { Database } from '../lib/supabase';
 
 // Types
@@ -44,9 +44,11 @@ interface AuthContextType {
   }) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: any }>;
   
   // Profile functions
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
+  uploadAvatar: (file: File) => Promise<{ error: any; url?: string }>;
   
   // Utility functions
   isLandlord: boolean;
@@ -90,7 +92,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (error) {
           console.error('Error loading profile:', error);
-          // Don't throw error, just set profile to null
           setProfile(null);
           return;
         }
@@ -126,17 +127,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!supabaseUrl || supabaseUrl.includes('placeholder') || !supabaseAnonKey || supabaseAnonKey.includes('placeholder')) {
         console.log('Supabase not configured, simulating signup success');
         return { error: null };
-      }
-      
-      // Check if user already exists (but don't fail if check fails)
-      try {
-        const { exists } = await auth.checkUserExists(email);
-        if (exists) {
-          return { error: { message: 'User with this email already exists' } };
-        }
-      } catch (checkError) {
-        console.log('User existence check failed, proceeding with signup:', checkError);
-        // Continue with signup even if check fails
       }
       
       const { data, error } = await auth.signUp(email, password, userData);
@@ -196,6 +186,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   /**
+   * RESET PASSWORD FUNCTION
+   * 
+   * Sends password reset email to user.
+   */
+  const resetPassword = async (email: string) => {
+    try {
+      if (!isSupabaseConfigured) {
+        return { error: { message: 'Supabase not configured' } };
+      }
+      
+      const { data, error } = await auth.resetPassword(email);
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  /**
    * UPDATE PROFILE FUNCTION
    * 
    * Updates user profile data in the database.
@@ -214,6 +222,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setProfile(data);
       return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  /**
+   * UPLOAD AVATAR FUNCTION
+   * 
+   * Uploads user avatar image to Supabase Storage.
+   */
+  const uploadAvatar = async (file: File) => {
+    if (!user) {
+      return { error: 'No user logged in' };
+    }
+
+    try {
+      // Upload file to storage
+      const { data: uploadData, error: uploadError } = await storage.uploadAvatar(user.id, file);
+      
+      if (uploadError) {
+        return { error: uploadError };
+      }
+      
+      // Update profile with new avatar URL
+      const { error: updateError } = await updateProfile({
+        avatar_url: uploadData!.publicUrl
+      });
+      
+      if (updateError) {
+        return { error: updateError };
+      }
+      
+      return { error: null, url: uploadData!.publicUrl };
     } catch (error) {
       return { error };
     }
@@ -308,7 +349,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUp,
     signIn,
     signOut,
+    resetPassword,
     updateProfile,
+    uploadAvatar,
     isLandlord,
     isTenant
   };

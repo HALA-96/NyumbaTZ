@@ -34,8 +34,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, Menu, X, User, Heart, Bell, Home, Info, Phone, LogIn, UserPlus } from 'lucide-react';
+import { Search, Menu, X, User, Heart, Bell, Home, Info, Phone, LogIn, UserPlus, Settings, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { getInitials, generateAvatarColor } from '../utils/formatters';
 import LanguageSwitcher from './LanguageSwitcher';
+import ProfileModal from './ProfileModal';
 
 /**
  * HEADER COMPONENT PROPS INTERFACE
@@ -45,8 +48,7 @@ import LanguageSwitcher from './LanguageSwitcher';
  */
 interface HeaderProps {
   onSearch?: (query: string) => void;    // Callback for search functionality
-  isAuthenticated?: boolean;             // User authentication state
-  onAuthClick?: () => void;              // Callback for auth actions (login/signup)
+  onAuthClick?: (mode?: 'login' | 'register') => void; // Callback for auth actions (login/signup)
 }
 
 /**
@@ -56,20 +58,25 @@ interface HeaderProps {
  */
 const Header: React.FC<HeaderProps> = ({ 
   onSearch = () => {}, 
-  isAuthenticated = false, 
   onAuthClick = () => {} 
 }) => {
   // INTERNATIONALIZATION HOOKS
   const { t } = useTranslation(['header', 'common']);
+  
+  // AUTH CONTEXT
+  const { user, profile, signOut } = useAuth();
 
   // COMPONENT STATE MANAGEMENT
   const [isMenuOpen, setIsMenuOpen] = useState(false);           // Mobile menu toggle
   const [searchQuery, setSearchQuery] = useState('');           // Current search input
   const [isSearchExpanded, setIsSearchExpanded] = useState(false); // Search expansion state
+  const [showProfileModal, setShowProfileModal] = useState(false); // Profile modal state
+  const [showUserMenu, setShowUserMenu] = useState(false);      // User dropdown menu
 
   // REFS FOR CLICK OUTSIDE DETECTION
   const searchRef = useRef<HTMLDivElement>(null);               // Desktop search container
   const mediumSearchRef = useRef<HTMLDivElement>(null);         // Tablet search container
+  const userMenuRef = useRef<HTMLDivElement>(null);            // User menu container
 
   /**
    * SEARCH FORM SUBMISSION HANDLER
@@ -113,6 +120,19 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   /**
+   * HANDLE SIGN OUT
+   */
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setShowUserMenu(false);
+      setIsMenuOpen(false);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  /**
    * CLICK OUTSIDE DETECTION EFFECT
    * 
    * Closes expanded search when user clicks outside.
@@ -125,6 +145,9 @@ const Header: React.FC<HeaderProps> = ({
       }
       if (mediumSearchRef.current && !mediumSearchRef.current.contains(event.target as Node)) {
         setIsSearchExpanded(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
       }
     };
 
@@ -159,8 +182,14 @@ const Header: React.FC<HeaderProps> = ({
     'Apartment', 'House', 'Parking', 'Security'
   ];
 
+  // User avatar and display name
+  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
+  const initials = getInitials(displayName);
+  const avatarColor = generateAvatarColor(displayName);
+
   return (
-    <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
+    <>
+      <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
         <div className="flex justify-between items-center h-14 sm:h-16 lg:h-20">
           
@@ -316,9 +345,9 @@ const Header: React.FC<HeaderProps> = ({
             {/* Language Switcher */}
             <LanguageSwitcher variant="dropdown" size="md" showLabel={false} />
 
-            {isAuthenticated ? (
+            {user ? (
               // AUTHENTICATED USER MENU
-              <>
+              <div className="relative" ref={userMenuRef}>
                 {/* Favorites Button with notification badge */}
                 <button className="p-2 text-gray-600 hover:text-teal-600 hover:bg-gray-100 rounded-full transition-colors duration-200 relative">
                   <Heart className="h-5 w-5" />
@@ -332,19 +361,66 @@ const Header: React.FC<HeaderProps> = ({
                 </button>
                 
                 {/* User Profile Menu */}
-                <div className="flex items-center space-x-2 bg-gray-100 rounded-full pl-3 pr-2 py-1 hover:shadow-md transition-shadow duration-200 cursor-pointer">
-                  <span className="text-sm font-medium text-gray-700">David M.</span>
-                  <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center">
-                    <User className="h-4 w-4 text-white" />
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center space-x-2 bg-gray-100 rounded-full pl-3 pr-2 py-1 hover:shadow-md transition-shadow duration-200"
+                >
+                  <span className="text-sm font-medium text-gray-700">{displayName}</span>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden">
+                    {profile?.avatar_url ? (
+                      <img
+                        src={profile.avatar_url}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="w-full h-full flex items-center justify-center text-white text-sm font-bold"
+                        style={{ backgroundColor: avatarColor }}
+                      >
+                        {initials}
+                      </div>
+                    )}
                   </div>
-                </div>
-              </>
+                </button>
+
+                {/* User Dropdown Menu */}
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                    <button
+                      onClick={() => {
+                        setShowProfileModal(true);
+                        setShowUserMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                    >
+                      <User className="h-4 w-4" />
+                      <span>My Profile</span>
+                    </button>
+                    <button
+                      onClick={() => setShowUserMenu(false)}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Settings</span>
+                    </button>
+                    <hr className="my-1" />
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               // UNAUTHENTICATED USER ACTIONS
               <div className="flex items-center space-x-2 xl:space-x-3">
                 {/* Sign In Button */}
                 <button
-                  onClick={onAuthClick}
+                  onClick={() => onAuthClick('login')}
                   className="flex items-center space-x-2 text-gray-700 hover:text-teal-600 transition-colors duration-200 font-medium text-sm xl:text-base"
                 >
                   <LogIn className="h-4 w-4" />
@@ -353,7 +429,7 @@ const Header: React.FC<HeaderProps> = ({
                 
                 {/* Sign Up Button */}
                 <button
-                  onClick={onAuthClick}
+                  onClick={() => onAuthClick('register')}
                   className="flex items-center space-x-2 bg-teal-600 text-white px-3 xl:px-4 py-2 rounded-full hover:bg-teal-700 transition-colors duration-200 font-medium text-sm xl:text-base"
                 >
                   <UserPlus className="h-4 w-4" />
@@ -462,24 +538,49 @@ const Header: React.FC<HeaderProps> = ({
               </div>
 
               {/* USER SECTION */}
-              {isAuthenticated ? (
+              {user ? (
                 // AUTHENTICATED USER MOBILE MENU
                 <div>
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Account</h3>
                   
                   {/* User Profile Section */}
                   <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg mb-4">
-                    <div className="w-12 h-12 bg-teal-600 rounded-full flex items-center justify-center">
-                      <User className="h-6 w-6 text-white" />
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden">
+                      {profile?.avatar_url ? (
+                        <img
+                          src={profile.avatar_url}
+                          alt="Profile"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div
+                          className="w-full h-full flex items-center justify-center text-white text-lg font-bold"
+                          style={{ backgroundColor: avatarColor }}
+                        >
+                          {initials}
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1">
-                      <div className="font-medium text-gray-900">David Mwakibolwa</div>
-                      <div className="text-sm text-gray-500">david.mwakibolwa@email.com</div>
+                      <div className="font-medium text-gray-900">{displayName}</div>
+                      <div className="text-sm text-gray-500">{user.email}</div>
+                      <div className="text-xs text-gray-400 capitalize">{profile?.user_role}</div>
                     </div>
                   </div>
                   
                   {/* User Action Links */}
                   <div className="space-y-1">
+                    <button
+                      onClick={() => {
+                        setShowProfileModal(true);
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center space-x-3 px-3 py-3 text-gray-700 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors duration-200"
+                    >
+                      <User className="h-5 w-5" />
+                      <span>My Profile</span>
+                    </button>
+                    
                     <a 
                       href="#favorites" 
                       className="flex items-center justify-between px-3 py-3 text-gray-700 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors duration-200"
@@ -509,7 +610,7 @@ const Header: React.FC<HeaderProps> = ({
                       className="flex items-center space-x-3 px-3 py-3 text-gray-700 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors duration-200"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      <User className="h-5 w-5" />
+                      <Settings className="h-5 w-5" />
                       <span>{t('header:user.settings')}</span>
                     </a>
                   </div>
@@ -517,10 +618,10 @@ const Header: React.FC<HeaderProps> = ({
                   {/* Sign Out Button */}
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <button 
+                      onClick={handleSignOut}
                       className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 font-medium"
-                      onClick={() => setIsMenuOpen(false)}
                     >
-                      <LogIn className="h-5 w-5 rotate-180" />
+                      <LogOut className="h-5 w-5" />
                       <span>{t('header:auth.signOut')}</span>
                     </button>
                   </div>
@@ -533,7 +634,7 @@ const Header: React.FC<HeaderProps> = ({
                     {/* Sign In Button */}
                     <button
                       onClick={() => {
-                        onAuthClick();
+                        onAuthClick('login');
                         setIsMenuOpen(false);
                       }}
                       className="w-full flex items-center justify-center space-x-2 px-4 py-3 border-2 border-teal-600 text-teal-600 rounded-lg hover:bg-teal-50 transition-colors duration-200 font-medium"
@@ -545,7 +646,7 @@ const Header: React.FC<HeaderProps> = ({
                     {/* Sign Up Button */}
                     <button
                       onClick={() => {
-                        onAuthClick();
+                        onAuthClick('register');
                         setIsMenuOpen(false);
                       }}
                       className="w-full flex items-center justify-center space-x-2 bg-teal-600 text-white px-4 py-3 rounded-lg hover:bg-teal-700 transition-colors duration-200 font-medium shadow-md"
@@ -591,6 +692,13 @@ const Header: React.FC<HeaderProps> = ({
         </>
       )}
     </header>
+
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+      />
+    </>
   );
 };
 

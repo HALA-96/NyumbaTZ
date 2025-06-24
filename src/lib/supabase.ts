@@ -225,7 +225,7 @@ export const auth = {
         email,
         password,
         options: {
-          emailRedirectTo: undefined, // Disable email confirmation for MVP
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             full_name: userData.fullName,
             phone_number: userData.phoneNumber,
@@ -241,41 +241,6 @@ export const auth = {
       
       console.log('Signup successful, user created:', data.user?.id);
       
-      // Wait a moment for the trigger to create the profile
-      if (data.user) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Verify profile was created
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
-          
-        if (profileError) {
-          console.log('Profile not found, creating manually...', profileError);
-          // Create profile manually if trigger failed
-          const { error: createError } = await supabase
-            .from('profiles')
-            .insert({
-              id: data.user.id,
-              full_name: userData.fullName,
-              email: email,
-              phone_number: userData.phoneNumber,
-              user_role: userData.userRole,
-              is_verified: false
-            });
-            
-          if (createError) {
-            console.error('Manual profile creation failed:', createError);
-          } else {
-            console.log('Profile created manually');
-          }
-        } else {
-          console.log('Profile created by trigger:', profile);
-        }
-      }
-      
       return { data, error: null };
     } catch (err) {
       console.error('Signup catch error:', err);
@@ -283,66 +248,12 @@ export const auth = {
     }
   },
 
-  // Manual profile creation (fallback)
-  createProfile: async (userId: string, userData: { fullName: string; email: string; phoneNumber: string; userRole: 'tenant' | 'landlord' }) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          full_name: userData.fullName,
-          email: userData.email,
-          phone_number: userData.phoneNumber,
-          user_role: userData.userRole,
-          is_verified: false
-        })
-        .select()
-        .single();
-      
-      return { data, error };
-    } catch (err) {
-      console.error('Profile creation error:', err);
-      return { data: null, error: err };
-    }
-  },
-
-  // Check if user exists
-  checkUserExists: async (email: string) => {
-    try {
-      console.log('Checking if user exists:', email);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('email', email)
-        .maybeSingle(); // Use maybeSingle to avoid error when no rows found
-      
-      console.log('User exists check result:', { exists: !!data, error });
-      return { exists: !!data, error: null }; // Don't return error for "no rows found"
-    } catch (err) {
-      console.error('Error checking user existence:', err);
-      return { exists: false, error: err };
-    }
-  },
-
-  // Get user by email
-  getUserByEmail: async (email: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', email)
-        .single();
-      
-      return { data, error };
-    } catch (err) {
-      return { data: null, error: err };
-    }
-  },
-
   // Reset password
   resetPassword: async (email: string) => {
     try {
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email);
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
       return { data, error };
     } catch (err) {
       return { data: null, error: err };
@@ -354,52 +265,6 @@ export const auth = {
     try {
       const { data, error } = await supabase.auth.updateUser({ password });
       return { data, error };
-    } catch (err) {
-      return { data: null, error: err };
-    }
-  },
-
-  // Verify email
-  verifyEmail: async (token: string, type: string) => {
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        token_hash: token,
-        type: type as any
-      });
-      return { data, error };
-    } catch (err) {
-      return { data: null, error: err };
-    }
-  },
-
-  // Resend verification email
-  resendVerification: async (email: string) => {
-    try {
-      const { data, error } = await supabase.auth.resend({
-        type: 'signup',
-        email: email
-      });
-      return { data, error };
-    } catch (err) {
-      return { data: null, error: err };
-    }
-  },
-
-  // Get auth status
-  getAuthStatus: async () => {
-    try {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      return { user, error };
-    } catch (err) {
-      return { user: null, error: err };
-    }
-  },
-
-  // Refresh session
-  refreshSession: async () => {
-    try {
-      const { data, error } = await supabase.auth.refreshSession();
-    return { data, error };
     } catch (err) {
       return { data: null, error: err };
     }
@@ -603,12 +468,7 @@ export const db = {
             price_monthly
           )
         `)
-        .in('property_id', 
-          supabase
-            .from('properties')
-            .select('id')
-            .eq('owner_id', landlordId)
-        )
+        .eq('landlord_id', landlordId)
         .order('created_at', { ascending: false });
     },
 
@@ -622,7 +482,7 @@ export const db = {
     },
 
     // Update inquiry status
-    updateStatus: async (id: string, status: 'new' | 'contacted' | 'viewed') => {
+    updateStatus: async (id: string, status: 'new' | 'contacted' | 'viewed' | 'closed') => {
       return supabase
         .from('property_inquiries')
         .update({ status, updated_at: new Date().toISOString() })
@@ -630,6 +490,75 @@ export const db = {
         .select()
         .single();
     }
+  }
+};
+
+/**
+ * STORAGE HELPERS
+ * 
+ * Helper functions for file upload and management.
+ */
+
+export const storage = {
+  // Upload avatar image
+  uploadAvatar: async (userId: string, file: File) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/avatar.${fileExt}`;
+    
+    const { data, error } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, file, {
+        upsert: true
+      });
+    
+    if (error) return { data: null, error };
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(fileName);
+    
+    return { data: { path: data.path, publicUrl }, error: null };
+  },
+
+  // Upload property images
+  uploadPropertyImages: async (propertyId: string, files: File[]) => {
+    const uploadPromises = files.map(async (file, index) => {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${propertyId}/${Date.now()}-${index}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('property-images')
+        .upload(fileName, file);
+      
+      if (error) throw error;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('property-images')
+        .getPublicUrl(fileName);
+      
+      return publicUrl;
+    });
+    
+    try {
+      const urls = await Promise.all(uploadPromises);
+      return { data: urls, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
+
+  // Delete file
+  deleteFile: async (bucket: string, path: string) => {
+    return supabase.storage
+      .from(bucket)
+      .remove([path]);
+  },
+
+  // Get public URL
+  getPublicUrl: (bucket: string, path: string) => {
+    return supabase.storage
+      .from(bucket)
+      .getPublicUrl(path);
   }
 };
 
@@ -660,7 +589,7 @@ export const realtime = {
           event: 'INSERT', 
           schema: 'public', 
           table: 'property_inquiries',
-          filter: `property_id=in.(select id from properties where owner_id=eq.${landlordId})`
+          filter: `landlord_id=eq.${landlordId}`
         }, 
         callback
       )
