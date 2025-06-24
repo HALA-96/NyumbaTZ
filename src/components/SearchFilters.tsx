@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Filter, X, Sliders, Home, Building, Users, Car, Shield, Zap } from 'lucide-react';
 import { SearchFilters as SearchFiltersType } from '../types';
-import { tanzanianCities, propertyTypes, amenities } from '../data/mockData';
+import { TANZANIAN_CITIES, PROPERTY_TYPES, COMMON_AMENITIES } from '../utils/constants';
 
 interface SearchFiltersProps {
   filters: SearchFiltersType;
@@ -87,7 +87,7 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
           className="w-full px-3 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm lg:text-base appearance-none bg-white"
         >
           <option value="">All cities / Miji yote</option>
-          {tanzanianCities.map((city) => (
+          {TANZANIAN_CITIES.map((city) => (
             <option key={city} value={city}>
               {city}
             </option>
@@ -131,7 +131,7 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
           Property Type / Aina ya Mali
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {propertyTypes.map((type) => (
+          {PROPERTY_TYPES.map((type) => (
             <button
               key={type.value}
               onClick={() => handleFilterChange('propertyType', 
@@ -198,7 +198,7 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
           Amenities / Huduma
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {amenities.slice(0, 8).map((amenity) => (
+          {COMMON_AMENITIES.slice(0, 8).map((amenity) => (
             <button
               key={amenity}
               onClick={() => handleAmenityToggle(amenity)}

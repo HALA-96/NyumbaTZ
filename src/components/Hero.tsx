@@ -42,7 +42,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, MapPin, Home, Users } from 'lucide-react';
-import { tanzanianCities } from '../data/mockData';
+import { TANZANIAN_CITIES } from '../utils/constants';
 import { SearchFilters } from '../types';
 
 /**
@@ -137,7 +137,7 @@ export default function Hero({ onSearch }: HeroProps) {
                       className="pl-10 sm:pl-12 pr-10 w-full py-3 sm:py-3.5 lg:py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200 text-sm sm:text-base appearance-none bg-white flex items-center"
                     >
                       <option value="">{t('hero:searchForm.location.allCities')}</option>
-                      {tanzanianCities.map(city => (
+                      {TANZANIAN_CITIES.map(city => (
                         <option key={city} value={city}>{city}</option>
                       ))}
                     </select>
