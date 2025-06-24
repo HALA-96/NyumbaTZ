@@ -126,6 +126,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Check if Supabase is configured
       if (!supabaseUrl || supabaseUrl.includes('placeholder') || !supabaseAnonKey || supabaseAnonKey.includes('placeholder')) {
         console.log('Supabase not configured, simulating signup success');
+        // Create a mock user for development
+        const mockUser = {
+          id: Date.now().toString(),
+          email,
+          user_metadata: userData
+        };
+        setUser(mockUser as any);
+        setProfile({
+          id: mockUser.id,
+          full_name: userData.fullName,
+          phone_number: userData.phoneNumber,
+          user_role: userData.userRole,
+          avatar_url: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        } as any);
         return { error: null };
       }
       
@@ -137,6 +153,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       console.log('Signup data:', data);
+      
+      // If user is created but needs email confirmation
+      if (data.user && !data.session) {
+        console.log('User created, email confirmation required');
+        return { error: null };
+      }
+      
+      // If user is immediately signed in
+      if (data.user && data.session) {
+        console.log('User created and signed in immediately');
+        setUser(data.user);
+        setSession(data.session);
+        await loadProfile(data.user.id);
+      }
+      
       return { error: null };
     } catch (error) {
       console.error('Signup catch error:', error);

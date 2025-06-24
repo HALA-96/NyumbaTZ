@@ -204,7 +204,7 @@ export const auth = {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}`,
           data: {
             full_name: userData.fullName,
             phone_number: userData.phoneNumber,
@@ -218,7 +218,11 @@ export const auth = {
         return { data, error };
       }
       
-      console.log('Signup successful, user created:', data.user?.id);
+      console.log('Signup response:', {
+        user: data.user?.id,
+        session: !!data.session,
+        needsConfirmation: !data.session && data.user
+      });
       
       return { data, error: null };
     } catch (err) {

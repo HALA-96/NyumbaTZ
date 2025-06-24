@@ -115,6 +115,9 @@ const AuthModal: React.FC<AuthModalProps> = ({
   // Handle registration
   const handleRegister = async (data: RegisterFormData) => {
     try {
+      // Clear any previous errors
+      registerForm.clearErrors();
+      
       const { error } = await signUp(data.email, data.password, {
         fullName: data.fullName,
         phoneNumber: data.phoneNumber,
@@ -122,22 +125,31 @@ const AuthModal: React.FC<AuthModalProps> = ({
       });
       
       if (error) {
-        if (error.message?.includes('already registered') || error.message?.includes('already exists')) {
+        console.error('Registration error:', error);
+        
+        if (error.message?.includes('already registered') || 
+            error.message?.includes('already exists') || 
+            error.message?.includes('User already registered')) {
           toast.error('An account with this email already exists. Please try signing in instead.');
         } else if (error.message?.includes('Invalid email')) {
           toast.error('Please enter a valid email address.');
-        } else if (error.message?.includes('Password')) {
+        } else if (error.message?.includes('Password') || error.message?.includes('password')) {
           toast.error('Password must be at least 6 characters long.');
+        } else if (error.message?.includes('signup disabled')) {
+          toast.error('Account registration is currently disabled. Please contact support.');
+        } else if (error.message?.includes('email rate limit')) {
+          toast.error('Too many registration attempts. Please wait a few minutes and try again.');
         } else {
-          toast.error(error.message || 'Failed to create account. Please try again.');
+          toast.error(`Registration failed: ${error.message || 'Please check your information and try again.'}`);
         }
         return;
       }
       
-      toast.success('Account created successfully! Please check your email to confirm your account.');
+      toast.success('Account created successfully! You can now sign in with your credentials.');
       setMode('login');
       registerForm.reset();
     } catch (error: any) {
+      console.error('Registration catch error:', error);
       toast.error(error.message || 'An unexpected error occurred.');
     }
   };

@@ -33,6 +33,16 @@ export const validatePassword = (password: string): string | null => {
     return `Password must be at least ${VALIDATION.PASSWORD_MIN_LENGTH} characters`;
   }
   
+  // Additional password strength validation
+  if (password.length > 72) {
+    return 'Password must be less than 72 characters';
+  }
+  
+  // Check for at least one letter or number
+  if (!/[a-zA-Z0-9]/.test(password)) {
+    return 'Password must contain at least one letter or number';
+  }
+  
   return null;
 };
 
