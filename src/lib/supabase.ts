@@ -116,20 +116,15 @@ export interface Database {
           owner_id: string;
           title: string;
           description: string;
+          property_type: 'house' | 'apartment' | 'studio' | 'villa' | 'room';
           bedrooms: number;
           bathrooms: number;
-          price_monthly: number;
+          monthly_rent: number;
           city: string;
           area: string;
-          address?: string | null;
-          phone_contact: string;
+          contact_phone: string;
           images?: string[];
-          amenities?: string[];
-          utilities?: string[];
-          nearby_services?: string[];
           is_available?: boolean;
-          views_count?: number;
-          inquiries_count?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -138,58 +133,52 @@ export interface Database {
           owner_id?: string;
           title?: string;
           description?: string;
-          property_type?: 'house' | 'apartment' | 'room';
+          property_type?: 'house' | 'apartment' | 'studio' | 'villa' | 'room';
           bedrooms?: number;
           bathrooms?: number;
-          price_monthly?: number;
+          monthly_rent?: number;
           city?: string;
           area?: string;
-          address?: string | null;
-          phone_contact?: string;
+          contact_phone?: string;
           images?: string[];
-          amenities?: string[];
-          utilities?: string[];
-          nearby_services?: string[];
           is_available?: boolean;
-          views_count?: number;
-          inquiries_count?: number;
           created_at?: string;
           updated_at?: string;
         };
       };
-      property_inquiries: {
+      inquiries: {
         Row: {
           id: string;
           property_id: string;
           tenant_id: string;
+          landlord_id: string;
           tenant_name: string;
           tenant_phone: string;
           message: string;
-          status: 'new' | 'contacted' | 'viewed';
+          status: 'new' | 'contacted' | 'viewed' | 'closed';
           created_at: string;
-          updated_at: string;
         };
         Insert: {
           id?: string;
           property_id: string;
           tenant_id: string;
+          landlord_id: string;
           tenant_name: string;
           tenant_phone: string;
           message: string;
-          status?: 'new' | 'contacted' | 'viewed';
+          status?: 'new' | 'contacted' | 'viewed' | 'closed';
           created_at?: string;
-          updated_at?: string;
         };
         Update: {
           id?: string;
           property_id?: string;
           tenant_id?: string;
+          landlord_id?: string;
           tenant_name?: string;
           tenant_phone?: string;
           message?: string;
-          status?: 'new' | 'contacted' | 'viewed';
+          status?: 'new' | 'contacted' | 'viewed' | 'closed';
           created_at?: string;
-          updated_at?: string;
         };
       };
     };
@@ -310,8 +299,7 @@ export const db = {
           *,
           profiles:owner_id (
             full_name,
-            phone_number,
-            is_verified
+            phone_number
           )
         `)
         .eq('is_available', true)
@@ -322,10 +310,10 @@ export const db = {
         query = query.ilike('city', `%${filters.city}%`);
       }
       if (filters?.priceMin) {
-        query = query.gte('price_monthly', filters.priceMin);
+        query = query.gte('monthly_rent', filters.priceMin);
       }
       if (filters?.priceMax) {
-        query = query.lte('price_monthly', filters.priceMax);
+        query = query.lte('monthly_rent', filters.priceMax);
       }
       if (filters?.propertyType) {
         query = query.eq('property_type', filters.propertyType);
@@ -368,8 +356,7 @@ export const db = {
           *,
           profiles:owner_id (
             full_name,
-            phone_number,
-            is_verified
+            phone_number
           )
         `)
         .eq('id', id)
@@ -401,11 +388,6 @@ export const db = {
         .from('properties')
         .delete()
         .eq('id', id);
-    },
-
-    // Increment views
-    incrementViews: async (id: string) => {
-      return supabase.rpc('increment_property_views', { property_id: id });
     }
   },
 
@@ -445,14 +427,14 @@ export const db = {
     // Get inquiries for landlord
     getByLandlord: async (landlordId: string) => {
       return supabase
-        .from('property_inquiries')
+        .from('inquiries')
         .select(`
           *,
           properties (
             title,
             city,
             area,
-            price_monthly
+            monthly_rent
           )
         `)
         .eq('landlord_id', landlordId)
@@ -460,9 +442,9 @@ export const db = {
     },
 
     // Create inquiry
-    create: async (inquiry: Database['public']['Tables']['property_inquiries']['Insert']) => {
+    create: async (inquiry: Database['public']['Tables']['inquiries']['Insert']) => {
       return supabase
-        .from('property_inquiries')
+        .from('inquiries')
         .insert(inquiry)
         .select()
         .single();
@@ -471,8 +453,8 @@ export const db = {
     // Update inquiry status
     updateStatus: async (id: string, status: 'new' | 'contacted' | 'viewed' | 'closed') => {
       return supabase
-        .from('property_inquiries')
-        .update({ status, updated_at: new Date().toISOString() })
+        .from('inquiries')
+        .update({ status })
         .eq('id', id)
         .select()
         .single();
@@ -575,7 +557,7 @@ export const realtime = {
         { 
           event: 'INSERT', 
           schema: 'public', 
-          table: 'property_inquiries',
+          table: 'inquiries',
           filter: `landlord_id=eq.${landlordId}`
         }, 
         callback

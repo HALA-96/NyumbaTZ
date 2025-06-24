@@ -66,9 +66,9 @@ const convertDbPropertyToAppProperty = (dbProperty: any): Property => {
     ownerId: dbProperty.owner_id,
     title: dbProperty.title,
     description: dbProperty.description,
-    priceMonthly: dbProperty.price_monthly,
+    priceMonthly: dbProperty.monthly_rent,
     location: {
-      address: dbProperty.address || '',
+      address: '',
       city: dbProperty.city,
       district: dbProperty.area,
       neighborhood: dbProperty.area
@@ -76,7 +76,7 @@ const convertDbPropertyToAppProperty = (dbProperty: any): Property => {
     bedrooms: dbProperty.bedrooms,
     bathrooms: dbProperty.bathrooms,
     propertyType: dbProperty.property_type as 'house' | 'apartment' | 'studio' | 'villa' | 'room',
-    amenities: dbProperty.amenities || [],
+    amenities: [],
     images: dbProperty.images || ['https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg'],
     status: dbProperty.is_available ? 'available' : 'rented' as 'available' | 'rented' | 'maintenance',
     createdDate: dbProperty.created_at,
