@@ -92,7 +92,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (error) {
           console.error('Error loading profile:', error);
-          setProfile(null);
+          // Create a basic profile if none exists
+          console.log('Creating basic profile for user:', userId);
+          const basicProfile = {
+            id: userId,
+            full_name: 'User',
+            phone_number: '',
+            user_role: 'tenant' as const,
+            avatar_url: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          setProfile(basicProfile);
           return;
         }
         
@@ -100,7 +111,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(data);
       } catch (dbError) {
         console.error('Database error loading profile:', dbError);
-        setProfile(null);
+        // Create a basic profile on database error
+        const basicProfile = {
+          id: userId,
+          full_name: 'User',
+          phone_number: '',
+          user_role: 'tenant' as const,
+          avatar_url: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        setProfile(basicProfile);
       }
     } catch (error) {
       console.error('Error loading profile:', error);

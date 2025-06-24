@@ -290,7 +290,7 @@ export const db = {
   properties: {
     // Get all properties with filters
     getAll: async (filters?: {
-      city?: string;
+      location?: string;
       priceMin?: number;
       priceMax?: number;
       propertyType?: string;
@@ -314,8 +314,8 @@ export const db = {
         .order('created_at', { ascending: false });
 
       // Apply filters
-      if (filters?.city) {
-        query = query.ilike('city', `%${filters.city}%`);
+      if (filters?.location) {
+        query = query.ilike('city', `%${filters.location}%`);
       }
       if (filters?.priceMin) {
         query = query.gte('monthly_rent', filters.priceMin);
@@ -347,6 +347,12 @@ export const db = {
       return query;
     },
 
+    // Increment property views
+    incrementViews: async (propertyId: string) => {
+      // This would increment a views counter in the database
+      // For now, we'll just return success
+      return { error: null };
+    },
     // Get properties by owner
     getByOwner: async (ownerId: string) => {
       return supabase

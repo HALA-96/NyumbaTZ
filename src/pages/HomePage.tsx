@@ -44,7 +44,6 @@ import SearchFilters from '../components/SearchFilters';
 import PropertyDetails from '../components/PropertyDetails';
 import { db, isSupabaseConfigured } from '../lib/supabase';
 import { Property, SearchFilters as SearchFiltersType } from '../types';
-import { mockProperties } from '../data/mockData';
 
 /**
  * PAGINATION CONFIGURATION
@@ -94,7 +93,7 @@ export default function HomePage() {
   
   // CORE DATA STATE
   const [properties, setProperties] = useState<Property[]>([]);                // All available properties
-  const [filteredProperties, setFilteredProperties] = useState<Property[]>(mockProperties); // Properties after filtering
+  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]); // Properties after filtering
   const [displayedProperties, setDisplayedProperties] = useState<Property[]>([]); // Currently displayed properties
   
   // PAGINATION STATE
@@ -132,7 +131,9 @@ export default function HomePage() {
       }
 
       console.log('Loading properties from database...');
-      const { data, error } = await db.properties.getAll();
+      const { data, error } = await db.properties.getAll({
+        limit: 50 // Load first 50 properties
+      });
       
       if (error) {
         console.error('Error loading properties:', error);

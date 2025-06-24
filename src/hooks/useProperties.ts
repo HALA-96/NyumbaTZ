@@ -8,7 +8,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db, isSupabaseConfigured } from '../lib/supabase';
 import { Property, SearchFilters } from '../types';
-import { mockProperties } from '../data/mockData';
 
 // Query keys for React Query
 export const PROPERTY_KEYS = {
@@ -57,6 +56,7 @@ export const useProperties = (filters: SearchFilters = {}) => {
     queryFn: async () => {
       if (!isSupabaseConfigured) {
         // Filter mock data based on filters
+        const { mockProperties } = await import('../data/mockData');
         let filtered = [...mockProperties];
         
         if (filters.location) {
@@ -107,6 +107,7 @@ export const useProperty = (id: string) => {
     queryKey: PROPERTY_KEYS.detail(id),
     queryFn: async () => {
       if (!isSupabaseConfigured) {
+        const { mockProperties } = await import('../data/mockData');
         return mockProperties.find(p => p.id === id) || null;
       }
 
@@ -129,6 +130,7 @@ export const usePropertiesByOwner = (ownerId: string) => {
     queryKey: PROPERTY_KEYS.byOwner(ownerId),
     queryFn: async () => {
       if (!isSupabaseConfigured) {
+        const { mockProperties } = await import('../data/mockData');
         return mockProperties.filter(p => p.ownerId === ownerId);
       }
 
