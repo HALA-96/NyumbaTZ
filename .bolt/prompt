@@ -10,7 +10,7 @@ Create a **Minimum Viable Product (MVP)** for "Nyumba Connect" - a simple but fu
 - **Supabase Auth registration**: Name, email, phone, user type (Tenant/Landlord)
 - **Email/password login** with Supabase Auth
 - **Profile management**: Avatar upload to Supabase Storage, contact info, verification status
-- **Password reset functionality** via Supabase
+
 - **User roles/types** stored in profiles table
 
 ### 2. Property Listing (Landlords) - Real Database
