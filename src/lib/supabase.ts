@@ -297,9 +297,10 @@ export const db = {
         .from('properties')
         .select(`
           *,
-          profiles:owner_id (
+          profiles!properties_owner_id_fkey (
             full_name,
-            phone_number
+            phone_number,
+            user_role
           )
         `)
         .eq('is_available', true)
@@ -354,9 +355,10 @@ export const db = {
         .from('properties')
         .select(`
           *,
-          profiles:owner_id (
+          profiles!properties_owner_id_fkey (
             full_name,
-            phone_number
+            phone_number,
+            user_role
           )
         `)
         .eq('id', id)
@@ -430,7 +432,7 @@ export const db = {
         .from('inquiries')
         .select(`
           *,
-          properties (
+          properties!property_id (
             title,
             city,
             area,
