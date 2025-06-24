@@ -107,6 +107,7 @@ export interface Database {
           area: string;
           contact_phone: string;
           images: string[];
+          amenities: string[];
           is_available: boolean;
           created_at: string;
           updated_at: string;
@@ -124,6 +125,7 @@ export interface Database {
           area: string;
           contact_phone: string;
           images?: string[];
+          amenities?: string[];
           is_available?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -141,6 +143,7 @@ export interface Database {
           area?: string;
           contact_phone?: string;
           images?: string[];
+          amenities?: string[];
           is_available?: boolean;
           created_at?: string;
           updated_at?: string;

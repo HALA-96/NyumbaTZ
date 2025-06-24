@@ -76,7 +76,7 @@ const convertDbPropertyToAppProperty = (dbProperty: any): Property => {
     bedrooms: dbProperty.bedrooms,
     bathrooms: dbProperty.bathrooms,
     propertyType: dbProperty.property_type as 'house' | 'apartment' | 'studio' | 'villa' | 'room',
-    amenities: [],
+    amenities: dbProperty.amenities || [],
     images: dbProperty.images || ['https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg'],
     status: dbProperty.is_available ? 'available' : 'rented' as 'available' | 'rented' | 'maintenance',
     createdDate: dbProperty.created_at,
